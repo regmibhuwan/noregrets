@@ -36,6 +36,9 @@ create table if not exists public.decisions (
   updated_at timestamptz not null default now()
 );
 
+-- Existing DBs: table may have been created before this column existed; IF NOT EXISTS skips CREATE TABLE.
+alter table public.decisions add column if not exists follow_up_date date;
+
 create index if not exists decisions_user_id_idx on public.decisions (user_id);
 create index if not exists decisions_follow_up_idx on public.decisions (user_id, follow_up_date);
 create index if not exists decisions_status_idx on public.decisions (user_id, status);
