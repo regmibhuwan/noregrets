@@ -54,6 +54,55 @@ alter table public.decisions add column if not exists ai_summary text;
 alter table public.decisions add column if not exists created_at timestamptz default now();
 alter table public.decisions add column if not exists updated_at timestamptz default now();
 
+-- Legacy CHECKs may list wrong status values; replace after coercing rows.
+update public.decisions
+set status = 'pending'
+where status is null
+   or trim(status) not in (
+        'pending',
+        'decided',
+        'revisited',
+        'regretted',
+        'satisfied'
+      );
+update public.decisions
+set urgency = 'medium'
+where urgency is null
+   or trim(urgency) not in ('low', 'medium', 'high');
+update public.decisions
+set confidence_level = null
+where confidence_level is not null
+  and (confidence_level < 1 or confidence_level > 5);
+update public.decisions
+set risk_score = null
+where risk_score is not null
+  and (risk_score < 0 or risk_score > 100);
+update public.decisions
+set tags = coalesce(tags, '{}')
+where tags is null;
+
+alter table public.decisions drop constraint if exists decisions_status_check;
+alter table public.decisions drop constraint if exists decisions_urgency_check;
+alter table public.decisions drop constraint if exists decisions_confidence_level_check;
+alter table public.decisions drop constraint if exists decisions_risk_score_check;
+
+alter table public.decisions
+  add constraint decisions_status_check
+  check (
+    status in ('pending', 'decided', 'revisited', 'regretted', 'satisfied')
+  );
+alter table public.decisions
+  add constraint decisions_urgency_check
+  check (urgency in ('low', 'medium', 'high'));
+alter table public.decisions
+  add constraint decisions_confidence_level_check
+  check (confidence_level is null or (confidence_level between 1 and 5));
+alter table public.decisions
+  add constraint decisions_risk_score_check
+  check (risk_score is null or (risk_score between 0 and 100));
+
+notify pgrst, 'reload schema';
+
 create index if not exists decisions_user_id_idx on public.decisions (user_id);
 create index if not exists decisions_follow_up_idx on public.decisions (user_id, follow_up_date);
 create index if not exists decisions_status_idx on public.decisions (user_id, status);
