@@ -6,6 +6,7 @@ import {
 } from "@/lib/validations";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import type { ActionState } from "./decisions";
 
 export async function completeOnboarding(
@@ -30,17 +31,22 @@ export async function completeOnboarding(
   } = await supabase.auth.getUser();
   if (!user) return { error: "You need to be signed in." };
 
-  const { error } = await supabase
-    .from("profiles")
-    .update({
+  // Upsert: update() touches 0 rows if no profile row exists (trigger lag / manual user),
+  // which used to return "ok" and trap users in an onboarding → dashboard redirect loop.
+  const { error } = await supabase.from("profiles").upsert(
+    {
+      id: user.id,
       display_name: parsed.data.displayName,
       onboarding_complete: true,
-    })
-    .eq("id", user.id);
+    },
+    { onConflict: "id" }
+  );
 
   if (error) return { error: error.message };
   revalidatePath("/", "layout");
-  return { ok: true };
+  revalidatePath("/dashboard");
+  revalidatePath("/onboarding");
+  redirect("/dashboard");
 }
 
 export async function updateSettings(

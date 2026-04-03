@@ -6,8 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CATEGORIES } from "@/lib/constants";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 
 const initial: ActionState = {};
@@ -22,15 +20,7 @@ function SubmitButton() {
 }
 
 export function OnboardingForm() {
-  const router = useRouter();
   const [state, action] = useFormState(completeOnboarding, initial);
-
-  useEffect(() => {
-    if (state?.ok) {
-      router.push("/dashboard");
-      router.refresh();
-    }
-  }, [state?.ok, router]);
 
   return (
     <form action={action} className="space-y-5">

@@ -16,7 +16,7 @@ export default async function HomePage() {
       .from("profiles")
       .select("onboarding_complete")
       .eq("id", user.id)
-      .single();
+      .maybeSingle();
     if (profile?.onboarding_complete) {
       redirect("/dashboard");
     }

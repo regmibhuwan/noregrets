@@ -67,9 +67,10 @@ export async function updateSession(request: NextRequest) {
       .from("profiles")
       .select("onboarding_complete")
       .eq("id", user.id)
-      .single();
+      .maybeSingle();
 
-    if (profile && !profile.onboarding_complete) {
+    // No row yet or not finished onboarding → same destination
+    if (!profile?.onboarding_complete) {
       const url = request.nextUrl.clone();
       url.pathname = "/onboarding";
       return NextResponse.redirect(url);
@@ -81,7 +82,7 @@ export async function updateSession(request: NextRequest) {
       .from("profiles")
       .select("onboarding_complete")
       .eq("id", user.id)
-      .single();
+      .maybeSingle();
 
     if (profile?.onboarding_complete) {
       const url = request.nextUrl.clone();

@@ -20,7 +20,7 @@ export default async function MainAppLayout({
     .from("profiles")
     .select("display_name, onboarding_complete")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
 
   if (!profile?.onboarding_complete) {
     redirect("/onboarding");
