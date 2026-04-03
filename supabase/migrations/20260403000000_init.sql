@@ -1,8 +1,9 @@
 -- NoRegrets: initial schema + RLS
--- Run in Supabase SQL editor or via supabase db push
+-- Safe to re-run: skips objects that already exist (IF NOT EXISTS + DROP POLICY IF EXISTS).
+-- If your tables exist but columns differ, fix in a new migration or reset the DB in dev.
 
 -- Profiles (1:1 with auth.users)
-create table public.profiles (
+create table if not exists public.profiles (
   id uuid references auth.users on delete cascade primary key,
   display_name text,
   onboarding_complete boolean not null default false,
@@ -12,7 +13,7 @@ create table public.profiles (
   updated_at timestamptz not null default now()
 );
 
-create table public.decisions (
+create table if not exists public.decisions (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users on delete cascade,
   title text not null,
@@ -35,12 +36,12 @@ create table public.decisions (
   updated_at timestamptz not null default now()
 );
 
-create index decisions_user_id_idx on public.decisions (user_id);
-create index decisions_follow_up_idx on public.decisions (user_id, follow_up_date);
-create index decisions_status_idx on public.decisions (user_id, status);
-create index decisions_category_idx on public.decisions (user_id, category);
+create index if not exists decisions_user_id_idx on public.decisions (user_id);
+create index if not exists decisions_follow_up_idx on public.decisions (user_id, follow_up_date);
+create index if not exists decisions_status_idx on public.decisions (user_id, status);
+create index if not exists decisions_category_idx on public.decisions (user_id, category);
 
-create table public.reflections (
+create table if not exists public.reflections (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users on delete cascade,
   decision_id uuid not null references public.decisions on delete cascade,
@@ -53,10 +54,10 @@ create table public.reflections (
   created_at timestamptz not null default now()
 );
 
-create index reflections_decision_idx on public.reflections (decision_id);
-create index reflections_user_idx on public.reflections (user_id);
+create index if not exists reflections_decision_idx on public.reflections (decision_id);
+create index if not exists reflections_user_idx on public.reflections (user_id);
 
-create table public.ai_insights (
+create table if not exists public.ai_insights (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users on delete cascade,
   decision_id uuid references public.decisions on delete set null,
@@ -68,7 +69,7 @@ create table public.ai_insights (
   created_at timestamptz not null default now()
 );
 
-create index ai_insights_user_idx on public.ai_insights (user_id, created_at desc);
+create index if not exists ai_insights_user_idx on public.ai_insights (user_id, created_at desc);
 
 -- RLS
 alter table public.profiles enable row level security;
@@ -76,6 +77,9 @@ alter table public.decisions enable row level security;
 alter table public.reflections enable row level security;
 alter table public.ai_insights enable row level security;
 
+drop policy if exists "profiles_select_own" on public.profiles;
+drop policy if exists "profiles_insert_own" on public.profiles;
+drop policy if exists "profiles_update_own" on public.profiles;
 create policy "profiles_select_own" on public.profiles
   for select using (auth.uid() = id);
 create policy "profiles_insert_own" on public.profiles
@@ -83,12 +87,15 @@ create policy "profiles_insert_own" on public.profiles
 create policy "profiles_update_own" on public.profiles
   for update using (auth.uid() = id);
 
+drop policy if exists "decisions_all_own" on public.decisions;
 create policy "decisions_all_own" on public.decisions
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
+drop policy if exists "reflections_all_own" on public.reflections;
 create policy "reflections_all_own" on public.reflections
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
+drop policy if exists "ai_insights_all_own" on public.ai_insights;
 create policy "ai_insights_all_own" on public.ai_insights
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
@@ -120,7 +127,10 @@ begin
 end;
 $$;
 
+drop trigger if exists profiles_updated_at on public.profiles;
 create trigger profiles_updated_at before update on public.profiles
   for each row execute function public.set_updated_at();
+
+drop trigger if exists decisions_updated_at on public.decisions;
 create trigger decisions_updated_at before update on public.decisions
   for each row execute function public.set_updated_at();
