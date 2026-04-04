@@ -1,8 +1,22 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
+import { type EmailOtpType } from "@supabase/supabase-js";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+
+const OTP_TYPES: EmailOtpType[] = [
+  "signup",
+  "invite",
+  "magiclink",
+  "recovery",
+  "email_change",
+  "email",
+];
+
+function isEmailOtpType(v: string | null): v is EmailOtpType {
+  return v !== null && (OTP_TYPES as string[]).includes(v);
+}
 
 function safeNext(raw: string | null): string {
   if (raw && raw.startsWith("/") && !raw.startsWith("//")) return raw;
@@ -46,6 +60,27 @@ function AuthCallbackContent() {
         if (!cancelled) {
           loginWithAuthError(router, "session", human);
         }
+        return;
+      }
+
+      const token_hash =
+        searchParams.get("token_hash") ?? url.searchParams.get("token_hash");
+      const typeRaw =
+        searchParams.get("type") ?? url.searchParams.get("type");
+      if (token_hash && isEmailOtpType(typeRaw)) {
+        setNote("Securing your session…");
+        const supabaseOtp = createClient();
+        const { error: otpErr } = await supabaseOtp.auth.verifyOtp({
+          token_hash,
+          type: typeRaw,
+        });
+        if (cancelled) return;
+        if (otpErr) {
+          loginWithAuthError(router, "session", otpErr.message);
+          return;
+        }
+        router.replace(nextPath);
+        router.refresh();
         return;
       }
 
@@ -133,7 +168,7 @@ function AuthCallbackContent() {
         loginWithAuthError(
           router,
           "missing_code",
-          "Open the link in Safari or Chrome, or request a new reset email."
+          "Request a new reset email and open the new link."
         );
       }
     }
