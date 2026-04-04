@@ -10,7 +10,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-type Step = "email" | "code" | "password";
+type Step = "email" | "checkEmail" | "password";
 
 export function ForgotPasswordForm() {
   const router = useRouter();
@@ -49,7 +49,7 @@ export function ForgotPasswordForm() {
       return;
     }
     setEmail(em);
-    setStep("code");
+    setStep("checkEmail");
   }
 
   async function verifyCode(e: React.FormEvent) {
@@ -103,14 +103,30 @@ export function ForgotPasswordForm() {
     router.refresh();
   }
 
-  if (step === "code") {
+  if (step === "checkEmail") {
     return (
       <div className="space-y-5">
+        <div className="rounded-2xl border border-accent/20 bg-accent-soft/20 dark:bg-accent-soft/10 px-4 py-3 space-y-2">
+          <p className="text-sm font-medium text-foreground">
+            Check your email — use the link first
+          </p>
+          <p className="text-sm text-muted leading-relaxed">
+            Supabase usually sends a <strong className="text-foreground">reset link</strong>, not a
+            code. Open it on <strong className="text-foreground">this same device/browser</strong>{" "}
+            (the site you’re on now). You’ll land on the “new password” page.
+          </p>
+          <p className="text-xs text-muted leading-relaxed">
+            If the link opens <code className="text-foreground">localhost</code> or says{" "}
+            <code className="text-foreground">otp_expired</code>, set{" "}
+            <strong className="text-foreground">Site URL</strong> in Supabase → Authentication → URL
+            configuration to your production URL (same host as this app) and request a
+            new reset. Some mail scanners burn one-time links; try resend or another inbox.
+          </p>
+        </div>
         <p className="text-sm text-muted leading-relaxed">
-          Enter the verification code we sent to{" "}
-          <span className="text-foreground font-medium">{email}</span>. If you
-          only see a button in the email, tap it—then you can set a new password
-          on the page that opens.
+          Optional: if your email shows a <strong className="text-foreground">6-digit code</strong>{" "}
+          (custom template), enter it for{" "}
+          <span className="text-foreground font-medium">{email}</span>.
         </p>
         <form onSubmit={verifyCode} className="space-y-4">
           {error && (
@@ -119,12 +135,12 @@ export function ForgotPasswordForm() {
             </p>
           )}
           <div className="space-y-1.5">
-            <Label htmlFor="recovery-otp">Verification code</Label>
+            <Label htmlFor="recovery-otp">Code (only if shown in email)</Label>
             <Input
               id="recovery-otp"
               inputMode="numeric"
               autoComplete="one-time-code"
-              placeholder="6-digit code"
+              placeholder="Optional 6-digit code"
               value={code}
               onChange={(e) => setCode(e.target.value)}
               className="tracking-widest font-mono text-lg"
@@ -153,7 +169,7 @@ export function ForgotPasswordForm() {
               if (rErr) setError(rErr.message);
             }}
           >
-            Resend code
+            Resend email
           </Button>
           <Button
             type="button"
@@ -169,14 +185,13 @@ export function ForgotPasswordForm() {
           </Button>
         </div>
         <p className="text-xs text-muted">
-          If the email only has a reset button and you already tapped it,{" "}
+          Already clicked the link in this browser?{" "}
           <Link
             href="/auth/update-password"
             className="text-accent font-medium hover:underline"
           >
-            set your new password here
+            Set new password
           </Link>
-          .
         </p>
         <Link
           href="/login"
@@ -192,7 +207,7 @@ export function ForgotPasswordForm() {
     return (
       <form onSubmit={savePassword} className="space-y-5">
         <p className="text-sm text-muted leading-relaxed">
-          Code verified. Choose a new password for{" "}
+          Choose a new password for{" "}
           <span className="text-foreground font-medium">{email}</span>.
         </p>
         {error && (
@@ -250,7 +265,7 @@ export function ForgotPasswordForm() {
         />
       </div>
       <Button type="submit" className="w-full h-12" disabled={loading}>
-        {loading ? "Sending…" : "Send verification code"}
+        {loading ? "Sending…" : "Send reset email"}
       </Button>
     </form>
   );

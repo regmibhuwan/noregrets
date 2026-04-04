@@ -2,6 +2,7 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { getServerAppOrigin } from "@/lib/site-url";
 import { loginSchema, signupSchema } from "@/lib/validations";
 import { redirect } from "next/navigation";
 
@@ -11,14 +12,8 @@ export type AuthActionState = {
   email?: string;
 };
 
-function serverAppOrigin() {
-  const u =
-    process.env.NEXT_PUBLIC_APP_URL?.trim() || "http://localhost:3000";
-  return u.replace(/\/$/, "");
-}
-
 function emailRedirectTo() {
-  return `${serverAppOrigin()}/auth/callback?next=/onboarding`;
+  return `${getServerAppOrigin()}/auth/callback?next=/onboarding`;
 }
 
 function loginHelpMessage(raw: string): string {
