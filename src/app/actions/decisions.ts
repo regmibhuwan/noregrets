@@ -1,6 +1,7 @@
 "use server";
 
 import { decisionSchema } from "@/lib/validations";
+import { ensureProfileRow } from "@/lib/supabase/ensure-profile";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
@@ -39,6 +40,14 @@ export async function createDecision(
   } = await supabase.auth.getUser();
   if (!user) return { error: "You need to be signed in." };
 
+  const { error: profileErr } = await ensureProfileRow(supabase, user);
+  if (profileErr) {
+    return {
+      error:
+        "Could not sync your account. Sign out and sign in again, or confirm you are using the same Supabase project as this app.",
+    };
+  }
+
   const d = parsed.data;
   const riskRaw = formData.get("riskScore");
   const riskScore =
@@ -67,7 +76,15 @@ export async function createDecision(
     .select("id")
     .single();
 
-  if (error) return { error: error.message };
+  if (error) {
+    if (/foreign key|violates foreign key/i.test(error.message)) {
+      return {
+        error:
+          "This account is not linked to the database correctly. Run the latest Supabase migration (decisions → profiles), then sign out and sign in again.",
+      };
+    }
+    return { error: error.message };
+  }
   revalidatePath("/decisions");
   revalidatePath("/dashboard");
   return { ok: true, id: data.id };
@@ -107,6 +124,14 @@ export async function updateDecision(
   } = await supabase.auth.getUser();
   if (!user) return { error: "You need to be signed in." };
 
+  const { error: profileErr } = await ensureProfileRow(supabase, user);
+  if (profileErr) {
+    return {
+      error:
+        "Could not sync your account. Sign out and sign in again, or confirm you are using the same Supabase project as this app.",
+    };
+  }
+
   const d = parsed.data;
   const riskRaw = formData.get("riskScore");
   const riskScore =
@@ -134,7 +159,15 @@ export async function updateDecision(
     .eq("id", id)
     .eq("user_id", user.id);
 
-  if (error) return { error: error.message };
+  if (error) {
+    if (/foreign key|violates foreign key/i.test(error.message)) {
+      return {
+        error:
+          "This account is not linked to the database correctly. Run the latest Supabase migration (decisions → profiles), then sign out and sign in again.",
+      };
+    }
+    return { error: error.message };
+  }
   revalidatePath("/decisions");
   revalidatePath(`/decisions/${id}`);
   revalidatePath("/dashboard");

@@ -15,7 +15,7 @@ create table if not exists public.profiles (
 
 create table if not exists public.decisions (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
   title text not null,
   category text not null default 'other',
   description text,

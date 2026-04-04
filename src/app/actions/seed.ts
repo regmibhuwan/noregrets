@@ -1,5 +1,6 @@
 "use server";
 
+import { ensureProfileRow } from "@/lib/supabase/ensure-profile";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import type { ActionState } from "./decisions";
@@ -10,6 +11,14 @@ export async function seedDemoDecisions(): Promise<ActionState> {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "You need to be signed in." };
+
+  const { error: profileErr } = await ensureProfileRow(supabase, user);
+  if (profileErr) {
+    return {
+      error:
+        "Could not sync your account. Sign out and sign in again, or run the latest Supabase migration.",
+    };
+  }
 
   const { count, error: countErr } = await supabase
     .from("decisions")
