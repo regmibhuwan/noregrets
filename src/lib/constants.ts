@@ -10,6 +10,19 @@ export const CATEGORIES = [
 
 export type Category = (typeof CATEGORIES)[number]["value"];
 
+const CATEGORY_VALUE_SET = new Set<string>(
+  CATEGORIES.map((c) => c.value)
+);
+
+/** Maps any submitted value to a valid category (handles legacy DB checks & odd mobile submits). */
+export function normalizeDecisionCategory(raw: unknown): Category {
+  const s = String(raw ?? "")
+    .trim()
+    .toLowerCase();
+  if (CATEGORY_VALUE_SET.has(s)) return s as Category;
+  return "other";
+}
+
 export const URGENCY = [
   { value: "low", label: "Low" },
   { value: "medium", label: "Medium" },

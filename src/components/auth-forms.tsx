@@ -44,7 +44,8 @@ export function LoginForm({
         ? `Could not finish sign-in: ${urlMessage}`
         : "Confirmation link expired or invalid. Try again from your email."
       : urlError === "missing_code"
-        ? "That link was incomplete. Use the latest email we sent."
+        ? urlMessage ||
+          "That link didn’t open correctly. Request a new reset email and open it in Safari or Chrome (not only the in-app mail preview)."
         : null;
 
   return (

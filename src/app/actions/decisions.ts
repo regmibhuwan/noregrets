@@ -1,5 +1,6 @@
 "use server";
 
+import { normalizeDecisionCategory } from "@/lib/constants";
 import { decisionSchema } from "@/lib/validations";
 import { ensureProfileRow } from "@/lib/supabase/ensure-profile";
 import { createClient } from "@/lib/supabase/server";
@@ -49,6 +50,7 @@ export async function createDecision(
   }
 
   const d = parsed.data;
+  const category = normalizeDecisionCategory(d.category);
   const riskRaw = formData.get("riskScore");
   const riskScore =
     riskRaw != null && riskRaw !== ""
@@ -60,7 +62,7 @@ export async function createDecision(
     .insert({
       user_id: user.id,
       title: d.title,
-      category: d.category,
+      category,
       description: d.description,
       expected_outcome: d.expectedOutcome,
       confidence_level: d.confidenceLevel,
@@ -133,6 +135,7 @@ export async function updateDecision(
   }
 
   const d = parsed.data;
+  const category = normalizeDecisionCategory(d.category);
   const riskRaw = formData.get("riskScore");
   const riskScore =
     riskRaw != null && riskRaw !== ""
@@ -143,7 +146,7 @@ export async function updateDecision(
     .from("decisions")
     .update({
       title: d.title,
-      category: d.category,
+      category,
       description: d.description,
       expected_outcome: d.expectedOutcome,
       confidence_level: d.confidenceLevel,

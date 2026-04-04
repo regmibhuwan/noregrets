@@ -24,7 +24,13 @@ export const onboardingSchema = z.object({
 
 export const decisionSchema = z.object({
   title: z.string().min(1, "Title is required").max(200),
-  category: z.string().min(1),
+  category: z.preprocess(
+    (v) => {
+      const s = String(v ?? "").trim();
+      return s === "" ? "other" : s;
+    },
+    z.string().min(1)
+  ),
   description: z.string().max(5000).optional().nullable(),
   expectedOutcome: z.string().max(2000).optional().nullable(),
   confidenceLevel: z.coerce.number().int().min(1).max(5),

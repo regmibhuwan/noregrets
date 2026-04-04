@@ -101,6 +101,8 @@ alter table public.decisions
   add constraint decisions_risk_score_check
   check (risk_score is null or (risk_score between 0 and 100));
 
+alter table public.decisions drop constraint if exists decisions_category_check;
+
 notify pgrst, 'reload schema';
 
 create index if not exists decisions_user_id_idx on public.decisions (user_id);
