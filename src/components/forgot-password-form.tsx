@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createClient } from "@/lib/supabase/client";
+import { createRecoveryClient } from "@/lib/supabase/recovery-client";
 import { getPublicSiteOrigin } from "@/lib/site-url";
 import { emailOnlySchema } from "@/lib/validations";
 import Link from "next/link";
@@ -34,7 +34,7 @@ export function ForgotPasswordForm() {
     }
     const em = parsed.data.email;
     setLoading(true);
-    const supabase = createClient();
+    const supabase = createRecoveryClient();
     const { error: resetErr } = await supabase.auth.resetPasswordForEmail(em, {
       redirectTo: callbackForRecovery(),
     });
@@ -56,7 +56,7 @@ export function ForgotPasswordForm() {
             If an account exists for{" "}
             <span className="text-foreground font-medium">{email}</span>, we’ve
             sent a link to reset your password. It may take a minute—check spam
-            too. Open the link on this device to finish.
+            too.
           </p>
         </div>
         {error && (
@@ -73,7 +73,7 @@ export function ForgotPasswordForm() {
             onClick={async () => {
               setError(null);
               setLoading(true);
-              const supabase = createClient();
+              const supabase = createRecoveryClient();
               const { error: rErr } = await supabase.auth.resetPasswordForEmail(
                 email,
                 { redirectTo: callbackForRecovery() }

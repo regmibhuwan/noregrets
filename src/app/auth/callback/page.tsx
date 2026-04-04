@@ -29,7 +29,6 @@ function AuthCallbackContent() {
     let cancelled = false;
 
     async function run() {
-      const supabase = createClient();
       const url = new URL(window.location.href);
       const nextPath = safeNext(
         searchParams.get("next") ?? url.searchParams.get("next")
@@ -50,35 +49,6 @@ function AuthCallbackContent() {
         return;
       }
 
-      const code =
-        searchParams.get("code") ?? url.searchParams.get("code");
-      if (code) {
-        const pkceLock = `nr_pkce_${code}`;
-        if (sessionStorage.getItem(pkceLock) === "1") {
-          const {
-            data: { session },
-          } = await supabase.auth.getSession();
-          if (cancelled) return;
-          if (session) {
-            router.replace(nextPath);
-            router.refresh();
-            return;
-          }
-        }
-        sessionStorage.setItem(pkceLock, "1");
-        setNote("Securing your session…");
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
-        if (cancelled) return;
-        if (error) {
-          sessionStorage.removeItem(pkceLock);
-          loginWithAuthError(router, "session", error.message);
-          return;
-        }
-        router.replace(nextPath);
-        router.refresh();
-        return;
-      }
-
       const hashRaw = url.hash.replace(/^#/, "");
       if (hashRaw) {
         const hp = new URLSearchParams(hashRaw);
@@ -96,8 +66,14 @@ function AuthCallbackContent() {
         const access_token = hp.get("access_token");
         const refresh_token = hp.get("refresh_token");
         if (access_token && refresh_token) {
+          window.history.replaceState(
+            null,
+            "",
+            `${url.pathname}${url.search}`
+          );
           setNote("Securing your session…");
-          const { error } = await supabase.auth.setSession({
+          const supabasePkce = createClient();
+          const { error } = await supabasePkce.auth.setSession({
             access_token,
             refresh_token,
           });
@@ -106,15 +82,51 @@ function AuthCallbackContent() {
             loginWithAuthError(router, "session", error.message);
             return;
           }
-          window.history.replaceState(
-            null,
-            "",
-            `${url.pathname}${url.search}`
-          );
           router.replace(nextPath);
           router.refresh();
           return;
         }
+      }
+
+      const code =
+        searchParams.get("code") ?? url.searchParams.get("code");
+      if (code) {
+        const pkceLock = `nr_pkce_${code}`;
+        if (sessionStorage.getItem(pkceLock) === "1") {
+          const supabasePkce = createClient();
+          const {
+            data: { session },
+          } = await supabasePkce.auth.getSession();
+          if (cancelled) return;
+          if (session) {
+            router.replace(nextPath);
+            router.refresh();
+            return;
+          }
+        }
+        sessionStorage.setItem(pkceLock, "1");
+        setNote("Securing your session…");
+        const supabasePkce = createClient();
+        const {
+          data: { session: afterInit },
+        } = await supabasePkce.auth.getSession();
+        if (afterInit) {
+          if (!cancelled) {
+            router.replace(nextPath);
+            router.refresh();
+          }
+          return;
+        }
+        const { error } = await supabasePkce.auth.exchangeCodeForSession(code);
+        if (cancelled) return;
+        if (error) {
+          sessionStorage.removeItem(pkceLock);
+          loginWithAuthError(router, "session", error.message);
+          return;
+        }
+        router.replace(nextPath);
+        router.refresh();
+        return;
       }
 
       if (!cancelled) {
